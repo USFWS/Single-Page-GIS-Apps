@@ -1,0 +1,140 @@
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <title>Editor Widget Testing With Relationships (4.28)</title>
+    <style>
+        html,
+        body,
+        #viewDiv {
+            padding: 0;
+            margin: 0;
+            height: 100%;
+            width: 100%;
+        }
+    </style>
+
+    <link rel="stylesheet" href="https://js.arcgis.com/4.28/esri/themes/light/main.css" />
+    <script src="https://js.arcgis.com/4.28/"></script>
+
+    <script>
+        require([
+            "esri/Map",
+            "esri/layers/FeatureLayer",
+            "esri/views/MapView",
+            "esri/widgets/Legend",
+            "esri/widgets/Expand",
+            "esri/core/reactiveUtils",
+            "esri/widgets/Editor",
+            "esri/form/FormTemplate",
+            "esri/form/elements/FieldElement",
+            "esri/form/elements/RelationshipElement",
+            "esri/widgets/LayerList",
+        ], (
+            Map,
+            FeatureLayer,
+            MapView,
+            Legend,
+            Expand,
+            reactiveUtils,
+            Editor,
+            FormTemplate,
+            FieldElement,
+            RelationshipElement,
+            LayerList,
+        ) => {
+            // Create the map.
+            const map = new Map({
+                basemap: "gray-vector",
+            });
+
+            // Create the MapView.
+            const view = new MapView({
+                container: "viewDiv",
+                map: map,
+                popup: {
+                    // Dock the popup in the top right corner.
+                    dockEnabled: true,
+                    dockOptions: {
+                        breakpoint: false,
+                        position: "top-right",
+                    },
+                },
+            });
+
+            const vineyardLayer = new FeatureLayer({
+                url: "https://services.arcgis.com/QVENGdaPbd4LUkLV/arcgis/rest/services/Relationship_Editing_Test/FeatureServer/2",
+                formTemplate: new FormTemplate({
+                    title: "Grass Carp Survey Record",
+                    elements: [
+                        new FieldElement({
+                            fieldName: "APPELLATIONID",
+                            label: "Appellation ID",
+                        }),
+                        new FieldElement({
+                            fieldName: "TAXID",
+                            label: "Tax ID",
+                        }),
+                        new FieldElement({
+                            fieldName: "VINEYARDNAME",
+                            label: "Vineyard Name",
+                        }),
+                        new RelationshipElement({
+                            relationshipId: 1,
+                            label: "Blocks",
+                            displayCount: 3,
+                        }),
+                    ],
+                }),
+            });
+
+            vineyardLayer.when(() => {
+                view.extent = vineyardLayer.fullExtent;
+            });
+
+            const blockLayer = new FeatureLayer({
+                url: "https://services.arcgis.com/QVENGdaPbd4LUkLV/arcgis/rest/services/Relationship_Editing_Test/FeatureServer/1",
+            });
+
+            const subBlockLayer = new FeatureLayer({
+                url: "https://services.arcgis.com/QVENGdaPbd4LUkLV/arcgis/rest/services/Relationship_Editing_Test/FeatureServer/0",
+            });
+
+            map.addMany([vineyardLayer, blockLayer, subBlockLayer]);
+
+            const editorWidget = new Editor({
+                view: view,
+                allowedWorkflows: ["update"],
+                layerInfos: [
+                    {
+                        layer: blockLayer,
+                        enabled: false,
+                    },
+                    {
+                        layer: subBlockLayer,
+                        enabled: false,
+                    },
+                ],
+            });
+            view.ui.add(editorWidget, "bottom-left");
+
+            const layerListWidget = new LayerList({
+                view: view,
+            });
+            const layerListExpand = new Expand({
+                view: view,
+                content: layerListWidget
+            });
+            view.ui.add(layerListExpand, "top-right");
+
+
+        });
+    </script>
+</head>
+
+<body>
+    <div id="viewDiv"></div>
+</body>
+
+</html>
