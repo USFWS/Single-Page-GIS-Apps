@@ -129,7 +129,7 @@
 
                 const testingUsers = ["samuel_weissman@fws.gov_fws", "jessica_bowser@fws.gov_fws"];
 
-                if(testingUsers.includes(userName)) {
+                if (testingUsers.includes(userName)) {
                     const testUsername = prompt("What username are you impersonating?");
 
                     userName = testUsername.toLocaleLowerCase();
@@ -141,7 +141,7 @@
                     },
                 });
 
-                const configResults = await configTable.queryFeatures({where: `Username = '${userName}'`, outFields: ["Verification_Item_ID"]});
+                const configResults = await configTable.queryFeatures({ where: `Username = '${userName}'`, outFields: ["Verification_Item_ID"] });
 
                 const verificationLayer = new FeatureLayer({
                     portalItem: {
@@ -764,7 +764,7 @@
                 });
 
                 const webmap = new WebMap({
-                    basemap: "gray-vector",
+                    basemap: "topo-vector",
                 });
 
                 webmap.tables.add(bycatchTable);
