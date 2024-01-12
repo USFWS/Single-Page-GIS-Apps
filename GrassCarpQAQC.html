@@ -165,6 +165,11 @@
                                 id: "verify",
                                 icon: "register",
                             }),
+                            new ActionButton({
+                                title: "Submit Edit Request",
+                                id: "submit-edit-request",
+                                icon: "submit",
+                            })
                         ],
                         fieldInfos: [
                             new FieldInfo({
@@ -835,8 +840,10 @@
                     () => featuresWidget,
                     "trigger-action",
                     (event) => {
-                        if (event.action.id === "verify") {
-                            const currentObjectID = featuresWidget.selectedFeature.attributes["OBJECTID"];
+                        let currentObjectID;
+                        switch (event.action.id) {
+                            case "verify":
+                                currentObjectID = featuresWidget.selectedFeature.attributes["OBJECTID"];
 
                             view.ui.add(editorWidget, "bottom-left");
 
@@ -849,10 +856,22 @@
                             // eventOperationsLayer.queryExtent().then(function (results) {
                             //     view.goTo(results.extent);
                             // });
+                                break;
+                            case "submit-edit-request":
+                                currentObjectID = featuresWidget.selectedFeature.attributes["OBJECTID"];
+
+                                const modalReference = document.getElementById("modal-reference");
+                                modalReference.innerText = "Survey Record ObjectID: " + currentObjectID;
+
+                                modal.open = true;
+
+                                break;
 
                         }
                     }
                 );
+
+                const modal = document.getElementById("submit-edit-request-modal");
 
                 eventOperationsLayer.queryExtent().then(function (results) {
                     view.goTo(results.extent);
@@ -869,6 +888,18 @@
             <div id="features-widget" class="calcite-match-height"></div>
         </calcite-shell-panel>
         <div id="viewDiv"></div>
+        <calcite-modal aria-labelledby="modal-title" id="submit-edit-request-modal">
+            <div slot="header" id="modal-title">
+                GCR Program Database Edit Request
+            </div>
+            <div slot="content-top" id="modal-reference">
+
+            </div>
+            <div slot="content" id="modal-form">
+                <iframe width="100%" height="500px" id="edit-form"
+                    src="https://forms.office.com/Pages/ResponsePage.aspx?id=urWTBhhLe02TQfMvQApUlBMTEF7xTIBBg2ecu-8zhehUOVRQMlRLM1JVTFdMV0FMMEpJWlVUWDBIOS4u"></iframe>
+            </div>
+        </calcite-modal>
     </calcite-shell>
 </body>
 
