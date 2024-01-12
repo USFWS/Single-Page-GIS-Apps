@@ -363,7 +363,7 @@
                                 relationshipId: 0,
                                 label: "grass_carp_capture Data",
                                 displayCount: 3,
-                            }),                            
+                            }),
                             new RelationshipElement({
                                 relationshipId: 1,
                                 label: "bycatch Data",
@@ -832,7 +832,15 @@
                         featuresWidget.open({
                             location: event.mapPoint,
                             fetchFeatures: true,
-                        })
+                        });
+
+
+                        // Clear and remove the editor widget if a different point is selected on the map
+                        if (view.ui.find(editorWidget.id)) {
+                            editorWidget.cancelWorkflow();
+
+                            view.ui.remove(editorWidget);
+                        }
                     }
                 );
 
@@ -845,17 +853,17 @@
                             case "verify":
                                 currentObjectID = featuresWidget.selectedFeature.attributes["OBJECTID"];
 
-                            view.ui.add(editorWidget, "bottom-left");
+                                view.ui.add(editorWidget, "bottom-left");
 
-                            editorWidget.startUpdateWorkflowAtFeatureEdit(featuresWidget.selectedFeature);
+                                editorWidget.startUpdateWorkflowAtFeatureEdit(featuresWidget.selectedFeature);
 
-                            // view.closePopup();
+                                // view.closePopup();
 
-                            // eventOperationsLayer.refresh();
+                                // eventOperationsLayer.refresh();
 
-                            // eventOperationsLayer.queryExtent().then(function (results) {
-                            //     view.goTo(results.extent);
-                            // });
+                                // eventOperationsLayer.queryExtent().then(function (results) {
+                                //     view.goTo(results.extent);
+                                // });
                                 break;
                             case "submit-edit-request":
                                 currentObjectID = featuresWidget.selectedFeature.attributes["OBJECTID"];
