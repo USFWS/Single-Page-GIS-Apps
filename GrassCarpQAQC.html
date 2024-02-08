@@ -1,0 +1,914 @@
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <title>
+        GCR Program Database Verification App
+    </title>
+
+    <style>
+        html,
+        body,
+        #viewDiv {
+            padding: 0;
+            margin: 0;
+            height: 100%;
+            width: 100%;
+        }
+    </style>
+
+    <link rel="stylesheet" href="https://js.arcgis.com/4.28/esri/themes/light/main.css" />
+    <script src="https://js.arcgis.com/4.28/"></script>
+    <script type="module" src="https://js.arcgis.com/calcite-components/1.9.2/calcite.esm.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://js.arcgis.com/calcite-components/1.9.2/calcite.css" />
+
+    <script>
+        require([
+            "esri/views/MapView",
+            "esri/WebMap",
+            "esri/portal/Portal",
+            "esri/identity/IdentityManager",
+            "esri/identity/OAuthInfo",
+            "esri/layers/FeatureLayer",
+            "esri/portal/PortalItem",
+            "esri/widgets/Home",
+            "esri/widgets/LayerList",
+            "esri/PopupTemplate",
+            "esri/support/actions/ActionButton",
+            "esri/core/reactiveUtils",
+            "esri/popup/content/FieldsContent",
+            "esri/popup/content/RelationshipContent",
+            "esri/popup/FieldInfo",
+            "esri/layers/Layer",
+            "esri/widgets/Features",
+            "esri/layers/support/LabelClass",
+            "esri/widgets/Expand",
+            "esri/widgets/Legend",
+            "esri/popup/content/AttachmentsContent",
+            "esri/widgets/Editor",
+            "esri/form/FormTemplate",
+            "esri/form/elements/FieldElement",
+            "esri/form/elements/RelationshipElement",
+            "esri/form/ExpressionInfo",
+        ], (
+            MapView,
+            WebMap,
+            Portal,
+            IdentityManager,
+            OAuthInfo,
+            FeatureLayer,
+            PortalItem,
+            Home,
+            LayerList,
+            PopupTemplate,
+            ActionButton,
+            reactiveUtils,
+            FieldsContent,
+            RelationshipContent,
+            FieldInfo,
+            Layer,
+            Features,
+            LabelClass,
+            Expand,
+            Legend,
+            AttachmentsContent,
+            Editor,
+            FormTemplate,
+            FieldElement,
+            RelationshipElement,
+            ExpressionInfo,
+        ) => {
+            // Authenticate to AGOL
+            const activePortal = new Portal({
+                url: "https://fws.maps.arcgis.com/",
+                authMode: "immediate",
+            });
+
+            const activeCreds = new OAuthInfo({
+                appId: "YJmzOVei1kPsElhn",
+                portalUrl: activePortal.url,
+            });
+
+            IdentityManager.registerOAuthInfos([activeCreds]);
+
+            void activePortal.load().then(async () => {
+                const interestLayer = new FeatureLayer({
+                    portalItem: new PortalItem({
+                        id: "96898706f83f4df2863297dc20d477f2",
+                    }),
+                    popupEnabled: false,
+                    editingEnabled: false,
+                });
+
+                const rkmPolygonsLayer = new FeatureLayer({
+                    portalItem: new PortalItem({
+                        id: "ff9c35fc312f4fb19d60dc9fbf07f44b",
+                    }),
+                    popupEnabled: false,
+                    labelsVisible: true,
+                    labelingInfo: [
+                        new LabelClass({
+                            symbol: {
+                                type: "text",
+                                color: "white",
+                                haloColor: [0, 0, 0, 255],
+                                haloSize: 1,
+                            },
+                            labelPlacement: "always-horizontal",
+                            labelExpressionInfo: {
+                                expression: "$feature.rKM",
+                            },
+                            minScale: 75000,
+                        }),
+                    ],
+                    editingEnabled: false,
+                });
+
+                let userName = activePortal.user.username;
+
+                const testingUsers = ["samuel_weissman@fws.gov_fws", "jessica_bowser@fws.gov_fws"];
+
+                if (testingUsers.includes(userName)) {
+                    const testUsername = prompt("What username are you impersonating?");
+
+                    userName = testUsername.toLocaleLowerCase();
+                };
+
+                const configTable = new FeatureLayer({
+                    portalItem: {
+                        id: "237834693c4940379eb199e7755cbe94",
+                    },
+                });
+
+                const configResults = await configTable.queryFeatures({ where: `Username = '${userName}'`, outFields: ["Verification_Item_ID"] });
+
+                const verificationLayer = new FeatureLayer({
+                    portalItem: {
+                        id: configResults.features[0].attributes["Verification_Item_ID"],
+                    },
+                });
+
+                await verificationLayer.load();
+
+                const baseLayerServiceURL = verificationLayer.url;
+
+                const eventOperationsLayer = new FeatureLayer({
+                    url: baseLayerServiceURL + "/0",
+                    popupEnabled: true,
+                    popupTemplate: new PopupTemplate({
+                        title: "{other_location_collated}: {start_time} - {end_time}",
+                        outFields: ["*"],
+                        actions: [
+                            new ActionButton({
+                                title: "Verify",
+                                id: "verify",
+                                icon: "register",
+                            }),
+                            new ActionButton({
+                                title: "Submit Edit Request",
+                                id: "submit-edit-request",
+                                icon: "submit",
+                            })
+                        ],
+                        fieldInfos: [
+                            new FieldInfo({
+                                fieldName: "great_lake_watershed",
+                                label: "Which Great Lakes Watershed are you Sampling in?",
+                            }),
+                            new FieldInfo({
+                                fieldName: "project_response",
+                                label: "Project_Response",
+                            }),
+                            new FieldInfo({
+                                fieldName: "experimental",
+                                label: "Experimental Sampling?",
+                            }),
+                            new FieldInfo({
+                                fieldName: "survey_date",
+                                label: "Survey_Date",
+                                format: {
+                                    dateFormat: "short-date",
+                                }
+                            }),
+                            new FieldInfo({
+                                fieldName: "survey_year",
+                                label: "Year",
+                            }),
+                            new FieldInfo({
+                                fieldName: "other_agency_collated",
+                                label: "Agency_Name",
+                            }),
+                            new FieldInfo({
+                                fieldName: "other_data_recorder_collated",
+                                label: "Data_Recorder",
+                            }),
+                            new FieldInfo({
+                                fieldName: "other_crew_member_collated",
+                                label: "Crew Members",
+                            }),
+                            new FieldInfo({
+                                fieldName: "other_vessel_collated",
+                                label: "Vessel",
+                            }),
+                            new FieldInfo({
+                                fieldName: "sampling_style",
+                                label: "Sampling_Style",
+                            }),
+                            new FieldInfo({
+                                fieldName: "other_sampling_partner_collated",
+                                label: "Sampling Partner",
+                            }),
+                            new FieldInfo({
+                                fieldName: "number_partners",
+                                label: "Number_Tandem_Vessels",
+                            }),
+                            new FieldInfo({
+                                fieldName: "tandem_unique",
+                                label: "Tandem Unique ID",
+                            }),
+                            new FieldInfo({
+                                fieldName: "habitat_recorder",
+                                label: "Recording_Environmental_Data?",
+                            }),
+                            new FieldInfo({
+                                fieldName: "sampling_method",
+                                label: "Sampling_Protocol",
+                            }),
+                            new FieldInfo({
+                                fieldName: "other_location_collated",
+                                label: "Location",
+                            }),
+                            new FieldInfo({
+                                fieldName: "water_body",
+                                label: "Waterbody",
+                            }),
+                            new FieldInfo({
+                                fieldName: "state_info",
+                                label: "State",
+                            }),
+                            new FieldInfo({
+                                fieldName: "run_number",
+                                label: "Run Number",
+                            }),
+                            new FieldInfo({
+                                fieldName: "gps_track",
+                                label: "Did you Obtain a GPS Track?",
+                            }),
+                            new FieldInfo({
+                                fieldName: "transect",
+                                label: "Start_Transect",
+                            }),
+                            new FieldInfo({
+                                fieldName: "end_transect",
+                                label: "End_Transect",
+                            }),
+                            new FieldInfo({
+                                fieldName: "VR100",
+                                label: "Did you use a VR100?",
+                            }),
+                            new FieldInfo({
+                                fieldName: "vr100_fish",
+                                label: "Detect Fish on VR100?",
+                            }),
+                            new FieldInfo({
+                                fieldName: "vr100_grass_carp",
+                                label: "Was a Grass Carp, Non Grass Carp, or Both Detected?",
+                            }),
+                            new FieldInfo({
+                                fieldName: "fish1",
+                                label: "Fish_Tag1",
+                            }),
+                            new FieldInfo({
+                                fieldName: "fish2",
+                                label: "Fish_Tag2",
+                            }),
+                            new FieldInfo({
+                                fieldName: "fish3",
+                                label: "Fish_Tag3",
+                            }),
+                            new FieldInfo({
+                                fieldName: "non_gc_tag1",
+                                label: "Non_GC_Tag1",
+                            }),
+                            new FieldInfo({
+                                fieldName: "non_gc_tag2",
+                                label: "Non_GC_Tag2",
+                            }),
+                            new FieldInfo({
+                                fieldName: "non_gc_tag3",
+                                label: "Non_GC_Tag3",
+                            }),
+                            new FieldInfo({
+                                fieldName: "start_time",
+                                label: "Survey Start Date Time",
+                            }),
+                            new FieldInfo({
+                                fieldName: "end_time",
+                                label: "Survey End Date Time",
+                            }),
+                            new FieldInfo({
+                                fieldName: "total_seconds",
+                                label: "Total Seconds Shocked",
+                            }),
+                            new FieldInfo({
+                                fieldName: "combination",
+                                label: "Combination",
+                            }),
+                            new FieldInfo({
+                                fieldName: "bycatch_count",
+                                label: "Number_Bycatch",
+                            }),
+                            new FieldInfo({
+                                fieldName: "site_comments",
+                                label: "Site Comments",
+                            }),
+                            new FieldInfo({
+                                fieldName: "total_gc",
+                                label: "Total Grass Carp Captured",
+                            }),
+                        ],
+                        content: [
+                            new FieldsContent(),
+                            new RelationshipContent({
+                                relationshipId: 0,
+                                title: "grass_carp_capture Data",
+                                displayCount: 3,
+                            }),
+                            new RelationshipContent({
+                                relationshipId: 1,
+                                title: "bycatch Data",
+                                displayCount: 3,
+                            }),
+                            new RelationshipContent({
+                                relationshipId: 2,
+                                title: "effort Data",
+                                displayCount: 2,
+                            }),
+                            new RelationshipContent({
+                                relationshipId: 3,
+                                title: "environment Data",
+                                displayCount: 2,
+                            }),
+                        ],
+                    }),
+                    formTemplate: new FormTemplate({
+                        title: "Grass Carp Survey Record",
+                        elements: [
+                            new FieldElement({
+                                fieldName: "event_verified",
+                                label: "Verified",
+                            }),
+                            new RelationshipElement({
+                                relationshipId: 0,
+                                label: "grass_carp_capture Data",
+                                displayCount: 3,
+                            }),
+                            new RelationshipElement({
+                                relationshipId: 1,
+                                label: "bycatch Data",
+                                displayCount: 3,
+                            }),
+                            new RelationshipElement({
+                                relationshipId: 2,
+                                label: "effort Data",
+                                displayCount: 2,
+                            }),
+                            new RelationshipElement({
+                                relationshipId: 3,
+                                label: "environment Data",
+                                displayCount: 2,
+                            }),
+                        ],
+                    }),
+                });
+
+                const bycatchTable = new FeatureLayer({
+                    url: baseLayerServiceURL + "/1",
+                    listMode: "hide",
+                    visible: false,
+                    popupTemplate: new PopupTemplate({
+                        title: "TEST",
+                        fieldInfos: [
+                            new FieldInfo({
+                                fieldName: "Common_name",
+                                label: "Common Name",
+                            }),
+                            new FieldInfo({
+                                fieldName: "count_bycatch",
+                                label: "Count",
+                            }),
+                            new FieldInfo({
+                                fieldName: "bycatch_method",
+                                label: "Bycatch Capture Method",
+                            }),
+                        ],
+                        content: [new FieldsContent()],
+                    }),
+                    formTemplate: new FormTemplate({
+                        title: "Bycatch Record",
+                        elements: [
+                            new FieldElement({
+                                fieldName: "bycatch_verified",
+                                label: "Verified",
+                            }),
+                            new RelationshipElement({
+                                relationshipId: 1,
+                                title: "event_operations Data",
+                                displayCount: 1,
+                            }),
+                        ],
+                    }),
+                });
+
+                const effortTable = new FeatureLayer({
+                    url: baseLayerServiceURL + "/2",
+                    listMode: "hide",
+                    visible: false,
+                    popupTemplate: new PopupTemplate({
+                        title: "TEST",
+                        fieldInfos: [
+                            new FieldInfo({
+                                fieldName: "gear",
+                                label: "Gear",
+                            }),
+                            new FieldInfo({
+                                fieldName: "EF_Brand",
+                                label: "EF_Brand",
+                            }),
+                            new FieldInfo({
+                                fieldName: "pulse_rate",
+                                label: "Pulse_Rate",
+                            }),
+                            new FieldInfo({
+                                fieldName: "duty_cycle",
+                                label: "Duty_Cycle",
+                            }),
+                            new FieldInfo({
+                                fieldName: "amps_min",
+                                label: "Amps_Min",
+                            }),
+                            new FieldInfo({
+                                fieldName: "amps_max",
+                                label: "Amps_Max",
+                            }),
+                            new FieldInfo({
+                                fieldName: "watts_min",
+                                label: "Watts_Min",
+                            }),
+                            new FieldInfo({
+                                fieldName: "watts_max",
+                                label: "Watts_Max",
+                            }),
+                            new FieldInfo({
+                                fieldName: "volts_min",
+                                label: "Volts_Min",
+                            }),
+                            new FieldInfo({
+                                fieldName: "volts_max",
+                                label: "Volts_Max",
+                            }),
+                            new FieldInfo({
+                                fieldName: "seconds_shocked",
+                                label: "Total_Seconds_Shocked",
+                            }),
+                            new FieldInfo({
+                                fieldName: "net_style",
+                                label: "Net Set Style",
+                            }),
+                            new FieldInfo({
+                                fieldName: "area_shocked",
+                                label: "Area Shocked",
+                            }),
+                            new FieldInfo({
+                                fieldName: "start_date_time",
+                                label: "Start_Date_Time",
+                            }),
+                            new FieldInfo({
+                                fieldName: "end_date_time",
+                                label: "End_Date_Time",
+                            }),
+                            new FieldInfo({
+                                fieldName: "effort_minutes",
+                                label: "Effort (Minutes)",
+                            }),
+                            new FieldInfo({
+                                fieldName: "start_latitude",
+                                label: "Start_Latitude",
+                            }),
+                            new FieldInfo({
+                                fieldName: "start_longitude",
+                                label: "Start_Longitude",
+                            }),
+                            new FieldInfo({
+                                fieldName: "end_latitude",
+                                label: "End_Latitude",
+                            }),
+                            new FieldInfo({
+                                fieldName: "end_longitude",
+                                label: "End_Longitude",
+                            }),
+                            new FieldInfo({
+                                fieldName: "number_grass_carp",
+                                label: "Number of Grass Carp Captured",
+                            }),
+                        ],
+                        content: [new FieldsContent()],
+                    }),
+                    formTemplate: new FormTemplate({
+                        title: "Effort Record",
+                        elements: [
+                            new FieldElement({
+                                fieldName: "effort_verified",
+                                label: "Verified",
+                            }),
+                            new RelationshipElement({
+                                relationshipId: 2,
+                                title: "event_operations Data",
+                                displayCount: 1,
+                            }),
+                        ],
+                    }),
+                });
+
+                const environmentTable = new FeatureLayer({
+                    url: baseLayerServiceURL + "/3",
+                    listMode: "hide",
+                    visible: false,
+                    popupTemplate: new PopupTemplate({
+                        title: "Environment Data",
+                        fieldInfos: [
+                            new FieldInfo({
+                                fieldName: "water_temp",
+                                label: "Water_Temp(C)",
+                            }),
+                            new FieldInfo({
+                                fieldName: "specific_conductivity",
+                                label: "Specific_Conductivity",
+                            }),
+                            new FieldInfo({
+                                fieldName: "ambient_conductivity",
+                                label: "Ambient_Conductivity",
+                            }),
+                            new FieldInfo({
+                                fieldName: "percent_do",
+                                label: "Percent_DO",
+                            }),
+                            new FieldInfo({
+                                fieldName: "mgL_do",
+                                label: "mg/L_DO",
+                            }),
+                            new FieldInfo({
+                                fieldName: "turbidity",
+                                label: "Turbidity",
+                            }),
+                            new FieldInfo({
+                                fieldName: "ph",
+                                label: "pH",
+                            }),
+                            new FieldInfo({
+                                fieldName: "secchi_depth",
+                                label: "Secchi_Depth",
+                            }),
+                            new FieldInfo({
+                                fieldName: "aquatic_veg_cover",
+                                label: "Aquatic Veg Cover",
+                            }),
+                            new FieldInfo({
+                                fieldName: "vegetation_type",
+                                label: "Vegetation Type",
+                            }),
+                            new FieldInfo({
+                                fieldName: "other_veg_observed_collated",
+                                label: "Vegetation Observed",
+                            }),
+                            new FieldInfo({
+                                fieldName: "woody_debris",
+                                label: "Woody Debris Cover",
+                            }),
+                            new FieldInfo({
+                                fieldName: "woody_debris_type",
+                                label: "Woody Debris Type",
+                            }),
+                            new FieldInfo({
+                                fieldName: "substrate",
+                                label: "Substrate",
+                            }),
+                            new FieldInfo({
+                                fieldName: "shoreline",
+                                label: "Shoreline",
+                            }),
+                            new FieldInfo({
+                                fieldName: "depth_min",
+                                label: "Depth_Min(m)",
+                            }),
+                            new FieldInfo({
+                                fieldName: "depth_max",
+                                label: "Depth_Max(m)",
+                            }),
+                        ],
+                        content: [new FieldsContent()],
+                    }),
+                    formTemplate: new FormTemplate({
+                        title: "Environment Record",
+                        elements: [
+                            new FieldElement({
+                                fieldName: "enviro_verified",
+                                label: "Verified",
+                            }),
+                            new RelationshipElement({
+                                relationshipId: 3,
+                                title: "event_operations Data",
+                                displayCount: 1,
+                            }),
+                        ],
+                    }),
+                });
+
+                const grass_carp_capture_table = new FeatureLayer({
+                    url: baseLayerServiceURL + "/4",
+                    listMode: "hide",
+                    visible: false,
+                    popupTemplate: new PopupTemplate({
+                        title: "TEST",
+                        fieldInfos: [
+                            new FieldInfo({
+                                fieldName: "previously_caught",
+                                label: "Was this fish previously caught?",
+                            }),
+                            new FieldInfo({
+                                fieldName: "grass_carp_harvest",
+                                label: "Is this fish being harvested or released?",
+                            }),
+                            new FieldInfo({
+                                fieldName: "grass_carp_surgery",
+                                label: "Is this fish being tagged?",
+                            }),
+                            new FieldInfo({
+                                fieldName: "transmitter_UID",
+                                label: "Transmitter #",
+                            }),
+                            new FieldInfo({
+                                fieldName: "floytag_UID",
+                                label: "Floy Tag #",
+                            }),
+                            new FieldInfo({
+                                fieldName: "capture_waterbody",
+                                label: "Capture Waterbody",
+                            }),
+                            new FieldInfo({
+                                fieldName: "capture_date_time",
+                                label: "Capture Date and Time",
+                            }),
+                            new FieldInfo({
+                                fieldName: "capture_latitude",
+                                label: "Capture Latitude",
+                            }),
+                            new FieldInfo({
+                                fieldName: "capture_longitude",
+                                label: "Capture Longitude",
+                            }),
+                            new FieldInfo({
+                                fieldName: "capture_method",
+                                label: "Capture Method",
+                            }),
+                            new FieldInfo({
+                                fieldName: "capture_agency",
+                                label: "Capture Agency",
+                            }),
+                            new FieldInfo({
+                                fieldName: "capture_vessel",
+                                label: "Capture Vessel",
+                            }),
+                            new FieldInfo({
+                                fieldName: "seconds_to_capture",
+                                label: "Number of Seconds Shocked to Capture",
+                            }),
+                            new FieldInfo({
+                                fieldName: "bait_platform",
+                                label: "Captured Near Bait Platform?",
+                            }),
+                            new FieldInfo({
+                                fieldName: "bait_name",
+                                label: "Bait Platform Name",
+                            }),
+                            new FieldInfo({
+                                fieldName: "fish_harvest_UID",
+                                label: "Fish Unique ID",
+                            }),
+                            new FieldInfo({
+                                fieldName: "total_length",
+                                label: "Total Length (mm)",
+                            }),
+                            new FieldInfo({
+                                fieldName: "fork_length",
+                                label: "Fork Length (mm)",
+                            }),
+                            new FieldInfo({
+                                fieldName: "girth",
+                                label: "Girth (mm)",
+                            }),
+                            new FieldInfo({
+                                fieldName: "weight",
+                                label: "Weight (kg)",
+                            }),
+                            new FieldInfo({
+                                fieldName: "pec_fin",
+                                label: "Is the pectoral fin Smooth or Rough?",
+                            }),
+                            new FieldInfo({
+                                fieldName: "blood_sample",
+                                label: "blood_sample",
+                            }),
+                            new FieldInfo({
+                                fieldName: "blood_sample_UID",
+                                label: "Blood Barcode UID",
+                            }),
+                            new FieldInfo({
+                                fieldName: "virology_sample",
+                                label: "virology_sample",
+                            }),
+                            new FieldInfo({
+                                fieldName: "virology_sample_UID",
+                                label: "SVCV Barcode UID",
+                            }),
+                            new FieldInfo({
+                                fieldName: "genetics_sample",
+                                label: "genetics_sample",
+                            }),
+                        ],
+                        content: [
+                            new FieldsContent(),
+                            new AttachmentsContent({
+                                displayType: "list",
+                                title: "Attachments",
+                            }),
+                        ],
+                    }),
+                    formTemplate: new FormTemplate({
+                        title: "Grass Carp Capture Record",
+                        expressionInfos: [
+                            new ExpressionInfo({
+                                name: "notYes",
+                                expression: "$feature.capture_verified != 'Yes'",
+                            }),
+                        ],
+                        elements: [
+                            new FieldElement({
+                                fieldName: "capture_verified",
+                                label: "Verified",
+                                editableExpression: "notYes",
+                            }),
+                            new RelationshipElement({
+                                relationshipId: 0,
+                                title: "event_operations Data",
+                                displayCount: 1,
+                            }),
+                        ],
+                    }),
+                });
+
+                const webmap = new WebMap({
+                    basemap: "topo-vector",
+                });
+
+                webmap.tables.add(bycatchTable);
+                webmap.tables.add(effortTable);
+                webmap.tables.add(environmentTable);
+                webmap.tables.add(grass_carp_capture_table);
+                webmap.add(eventOperationsLayer);
+                webmap.add(interestLayer, 0);
+                webmap.add(rkmPolygonsLayer, 1);
+
+                const view = new MapView({
+                    map: webmap,
+                    container: "viewDiv",
+                    zoom: 7,
+                    center: [-82, 42],
+                    popupEnabled: false,
+                });
+
+                const homeWidget = new Home({
+                    view: view,
+                });
+                view.ui.add(homeWidget, "top-left");
+
+                const layerListWidget = new LayerList({
+                    view: view,
+                });
+                const layerListExpand = new Expand({
+                    view: view,
+                    content: layerListWidget
+                });
+                view.ui.add(layerListExpand, "top-right");
+
+                const legendWidget = new Legend({
+                    view: view,
+                });
+                const legendExpand = new Expand({
+                    view: view,
+                    content: legendWidget,
+                });
+                view.ui.add(legendExpand, "bottom-right");
+
+                const featuresWidget = new Features({
+                    container: "features-widget",
+                    view: view,
+                });
+
+                const editorWidget = new Editor({
+                    view: view,
+                    allowedWorkflows: ["update"],
+                    layerInfos: [{
+                        layer: eventOperationsLayer,
+                        geometryUpdatesEnabled: false,
+                    }]
+                });
+
+                reactiveUtils.on(
+                    () => view,
+                    "click",
+                    (event) => {
+                        featuresWidget.open({
+                            location: event.mapPoint,
+                            fetchFeatures: true,
+                        });
+
+
+                        // Clear and remove the editor widget if a different point is selected on the map
+                        if (view.ui.find(editorWidget.id)) {
+                            editorWidget.cancelWorkflow();
+
+                            view.ui.remove(editorWidget);
+                        }
+                    }
+                );
+
+                reactiveUtils.on(
+                    () => featuresWidget,
+                    "trigger-action",
+                    (event) => {
+                        let currentObjectID;
+                        switch (event.action.id) {
+                            case "verify":
+                                currentObjectID = featuresWidget.selectedFeature.attributes["OBJECTID"];
+
+                                view.ui.add(editorWidget, "bottom-left");
+
+                                editorWidget.startUpdateWorkflowAtFeatureEdit(featuresWidget.selectedFeature);
+
+                                // view.closePopup();
+
+                                // eventOperationsLayer.refresh();
+
+                                // eventOperationsLayer.queryExtent().then(function (results) {
+                                //     view.goTo(results.extent);
+                                // });
+                                break;
+                            case "submit-edit-request":
+                                currentObjectID = featuresWidget.selectedFeature.attributes["OBJECTID"];
+
+                                const modalReference = document.getElementById("modal-reference");
+                                modalReference.innerText = "Survey Record ObjectID: " + currentObjectID;
+
+                                modal.open = true;
+
+                                break;
+
+                        }
+                    }
+                );
+
+                const modal = document.getElementById("submit-edit-request-modal");
+
+                eventOperationsLayer.queryExtent().then(function (results) {
+                    view.goTo(results.extent);
+                });
+            });
+        });
+    </script>
+</head>
+
+<body>
+    <calcite-shell>
+        <calcite-shell-panel slot="panel-start" position="start" width-scale="l">
+            <calcite-block heading="Select a Survey Response"></calcite-block>
+            <div id="features-widget" class="calcite-match-height"></div>
+        </calcite-shell-panel>
+        <div id="viewDiv"></div>
+        <calcite-modal aria-labelledby="modal-title" id="submit-edit-request-modal">
+            <div slot="header" id="modal-title">
+                GCR Program Database Edit Request
+            </div>
+            <div slot="content-top" id="modal-reference">
+
+            </div>
+            <div slot="content" id="modal-form">
+                <iframe width="100%" height="500px" id="edit-form"
+                    src="https://forms.office.com/Pages/ResponsePage.aspx?id=urWTBhhLe02TQfMvQApUlBMTEF7xTIBBg2ecu-8zhehUOVRQMlRLM1JVTFdMV0FMMEpJWlVUWDBIOS4u"></iframe>
+            </div>
+        </calcite-modal>
+    </calcite-shell>
+</body>
+
+</html>
