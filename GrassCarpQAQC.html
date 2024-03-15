@@ -850,7 +850,7 @@
                 reactiveUtils.on(
                     () => featuresWidget,
                     "trigger-action",
-                    (event) => {
+                    async (event) => {
                         let currentObjectID;
                         switch (event.action.id) {
                             case "verify":
@@ -872,7 +872,67 @@
                                 currentObjectID = featuresWidget.selectedFeature.attributes["OBJECTID"];
 
                                 const modalReference = document.getElementById("modal-reference");
-                                modalReference.innerText = "Survey Record ObjectID: " + currentObjectID;
+                                modalReference.innerHTML = "Form_1 ObjectID: " + currentObjectID + "<br />";
+
+                                // Get related grass_carp_capture record ids
+                                const gccRelQuery = {
+                                    relationshipId: 0,
+                                    outFields: ["OBJECTID", "fish_harvest_UID"],
+                                    objectIds: [currentObjectID]
+                                };
+
+                                const gccRelResults = await featuresWidget.selectedFeature.layer.queryRelatedFeatures(gccRelQuery);
+
+                                if (gccRelResults[currentObjectID]) {
+                                    for (const gcc of gccRelResults[currentObjectID].features) {
+                                        modalReference.innerHTML += "Grass_Carp_Harvest_info " + gcc.attributes["fish_harvest_UID"] + " ObjectID: " + gcc.attributes["OBJECTID"] + "<br />"
+                                    }
+                                }
+
+                                // Get related bycatch record ids
+                                const bycatchRelQuery = {
+                                    relationshipId: 1,
+                                    outFields: ["OBJECTID", "Common_name"],
+                                    objectIds: [currentObjectID]
+                                };
+
+                                const bycatchRelResults = await featuresWidget.selectedFeature.layer.queryRelatedFeatures(bycatchRelQuery);
+
+                                if (bycatchRelResults[currentObjectID]) {
+                                    for (const bycatch of bycatchRelResults[currentObjectID].features) {
+                                        modalReference.innerHTML += "Bycatch " + bycatch.attributes["Common_name"] + " ObjectID: " + bycatch.attributes["OBJECTID"] + "<br />"
+                                    }
+                                }
+
+                                // Get related effort record ids
+                                const effortRelQuery = {
+                                    relationshipId: 2,
+                                    outFields: ["OBJECTID", "gear"],
+                                    objectIds: [currentObjectID]
+                                };
+
+                                const effortRelResults = await featuresWidget.selectedFeature.layer.queryRelatedFeatures(effortRelQuery);
+
+                                if (effortRelResults[currentObjectID]) {
+                                    for (const effort of effortRelResults[currentObjectID].features) {
+                                        modalReference.innerHTML += "Effort " + effort.attributes["gear"] + " ObjectID: " + effort.attributes["OBJECTID"] + "<br />"
+                                    }
+                                }
+
+                                // Get related environment record ids
+                                const environmentRelQuery = {
+                                    relationshipId: 3,
+                                    outFields: ["OBJECTID"],
+                                    objectIds: [currentObjectID]
+                                };
+
+                                const environmentRelResults = await featuresWidget.selectedFeature.layer.queryRelatedFeatures(environmentRelQuery);
+
+                                if (environmentRelResults[currentObjectID]) {
+                                    for (const environment of environmentRelResults[currentObjectID].features) {
+                                        modalReference.innerHTML += "Environment Data ObjectID: " + environment.attributes["OBJECTID"] + "<br />"
+                                    }
+                                }
 
                                 modal.open = true;
 
