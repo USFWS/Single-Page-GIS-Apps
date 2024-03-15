@@ -156,6 +156,7 @@
                 const eventOperationsLayer = new FeatureLayer({
                     url: baseLayerServiceURL + "/0",
                     popupEnabled: true,
+                    title: "Form1",
                     popupTemplate: new PopupTemplate({
                         title: "{other_location_collated}: {start_time} - {end_time}",
                         outFields: ["*"],
