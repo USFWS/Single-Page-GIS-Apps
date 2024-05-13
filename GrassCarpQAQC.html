@@ -91,37 +91,6 @@
             IdentityManager.registerOAuthInfos([activeCreds]);
 
             void activePortal.load().then(async () => {
-                const interestLayer = new FeatureLayer({
-                    portalItem: new PortalItem({
-                        id: "96898706f83f4df2863297dc20d477f2",
-                    }),
-                    popupEnabled: false,
-                    editingEnabled: false,
-                });
-
-                const rkmPolygonsLayer = new FeatureLayer({
-                    portalItem: new PortalItem({
-                        id: "ff9c35fc312f4fb19d60dc9fbf07f44b",
-                    }),
-                    popupEnabled: false,
-                    labelsVisible: true,
-                    labelingInfo: [
-                        new LabelClass({
-                            symbol: {
-                                type: "text",
-                                color: "white",
-                                haloColor: [0, 0, 0, 255],
-                                haloSize: 1,
-                            },
-                            labelPlacement: "always-horizontal",
-                            labelExpressionInfo: {
-                                expression: "$feature.rKM",
-                            },
-                            minScale: 75000,
-                        }),
-                    ],
-                    editingEnabled: false,
-                });
 
                 let userName = activePortal.user.username;
 
@@ -154,7 +123,7 @@
                 const eventOperationsLayer = new FeatureLayer({
                     url: baseLayerServiceURL + "/0",
                     popupEnabled: true,
-                    title: "Form1",
+                    title: "GCR Survey Results (Form1)",
                     popupTemplate: new PopupTemplate({
                         title: "{other_location_collated}: {start_time} - {end_time}",
                         outFields: ["*"],
@@ -767,17 +736,25 @@
                     }),
                 });
 
+                // Load webmap from AGOL
                 const webmap = new WebMap({
-                    basemap: "topo-vector",
+                    portalItem: {
+                        id: "5994ac947ba74732bbd06048fe647813"
+                    }
                 });
 
-                webmap.tables.add(bycatchTable);
-                webmap.tables.add(effortTable);
-                webmap.tables.add(environmentTable);
-                webmap.tables.add(grass_carp_capture_table);
-                webmap.add(eventOperationsLayer);
-                webmap.add(interestLayer, 0);
-                webmap.add(rkmPolygonsLayer, 1);
+                // Wait until webmap loads to add layers and zoom to extent
+                webmap.when(() => {
+                    webmap.tables.add(bycatchTable);
+                    webmap.tables.add(effortTable);
+                    webmap.tables.add(environmentTable);
+                    webmap.tables.add(grass_carp_capture_table);
+                    webmap.add(eventOperationsLayer);
+
+                    eventOperationsLayer.queryExtent().then(function (results) {
+                        view.goTo(results.extent);
+                    });
+                });
 
                 const view = new MapView({
                     map: webmap,
@@ -941,10 +918,6 @@
                 );
 
                 const modal = document.getElementById("submit-edit-request-modal");
-
-                eventOperationsLayer.queryExtent().then(function (results) {
-                    view.goTo(results.extent);
-                });
             });
         });
     </script>
