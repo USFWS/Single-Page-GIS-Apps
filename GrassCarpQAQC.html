@@ -141,10 +141,6 @@
                         ],
                         fieldInfos: [
                             new FieldInfo({
-                                fieldName: "great_lake_watershed",
-                                label: "Which Great Lakes Watershed are you Sampling in?",
-                            }),
-                            new FieldInfo({
                                 fieldName: "project_response",
                                 label: "Project_Response",
                             }),
@@ -295,6 +291,10 @@
                                 fieldName: "total_gc",
                                 label: "Total Grass Carp Captured",
                             }),
+                            new FieldInfo({
+                                fieldName: "river_habitat",
+                                label: "River Habitat",
+                            }),
                         ],
                         content: [
                             new FieldsContent(),
@@ -369,6 +369,10 @@
                             new FieldInfo({
                                 fieldName: "bycatch_method",
                                 label: "Bycatch Capture Method",
+                            }),
+                            new FieldInfo({
+                                fieldName: "count_mortality",
+                                label: "Count (Mortality)",
                             }),
                         ],
                         content: [new FieldsContent()],
@@ -479,6 +483,10 @@
                             new FieldInfo({
                                 fieldName: "number_grass_carp",
                                 label: "Number of Grass Carp Captured",
+                            }),
+                            new FieldInfo({
+                                fieldName: "lift_start_time",
+                                label: "Lift Start Time",
                             }),
                         ],
                         content: [new FieldsContent()],
@@ -653,14 +661,6 @@
                                 label: "Number of Seconds Shocked to Capture",
                             }),
                             new FieldInfo({
-                                fieldName: "bait_platform",
-                                label: "Captured Near Bait Platform?",
-                            }),
-                            new FieldInfo({
-                                fieldName: "bait_name",
-                                label: "Bait Platform Name",
-                            }),
-                            new FieldInfo({
                                 fieldName: "fish_harvest_UID",
                                 label: "Fish Unique ID",
                             }),
@@ -689,20 +689,20 @@
                                 label: "blood_sample",
                             }),
                             new FieldInfo({
-                                fieldName: "blood_sample_UID",
-                                label: "Blood Barcode UID",
-                            }),
-                            new FieldInfo({
-                                fieldName: "virology_sample",
-                                label: "virology_sample",
-                            }),
-                            new FieldInfo({
-                                fieldName: "virology_sample_UID",
-                                label: "SVCV Barcode UID",
-                            }),
-                            new FieldInfo({
                                 fieldName: "genetics_sample",
                                 label: "genetics_sample",
+                            }),
+                            new FieldInfo({
+                                fieldName: "capture_net_area",
+                                label: "Capture Net Area",
+                            }),
+                            new FieldInfo({
+                                fieldName: "sample_event_type",
+                                label: "Sample Event Type",
+                            }),
+                            new FieldInfo({
+                                fieldName: "gc_comments",
+                                label: "GC Comments",
                             }),
                         ],
                         content: [
